@@ -11,10 +11,12 @@ from torch.utils.data import Dataset, DataLoader
 from pycocotools.coco import COCO
 
 import spb.sdk
-from transforms import RandomHorizontalFlip, ToTensor, Compose
-from coco_utils import FilterAndRemapCocoCategories, ConvertCocoPolysToMask, CocoDetection
-from utils import collate_fn
-from suite_utils import call_with_retry, open_image
+from suite_detection.utils import call_with_retry, open_image
+from suite_detection.official.utils import collate_fn
+from suite_detection.official import (
+    transforms as T,
+    coco_utils as C,
+)
 
 
 def load_image(client, label_id, cache_dir):
@@ -133,20 +135,20 @@ def load_label(export, filename, category_id_map, image_id):
 
 def build_transforms(train, categories, transforms=None, target_category_names=None):
     if transforms is None:
-        transforms = [ConvertCocoPolysToMask()]
+        transforms = [C.ConvertCocoPolysToMask()]
 
     if target_category_names is not None:
         category_ids = [cat['id'] for cat in categories if cat['name'] in target_category_names]
-        pre_transforms = [FilterAndRemapCocoCategories(category_ids)]
+        pre_transforms = [C.FilterAndRemapCocoCategories(category_ids)]
     else:
         pre_transforms = []
 
     if train:
-        post_transforms = [ToTensor(), RandomHorizontalFlip(0.5)]
+        post_transforms = [T.ToTensor(), T.RandomHorizontalFlip(0.5)]
     else:
-        post_transforms = [ToTensor()]
+        post_transforms = [T.ToTensor()]
 
-    return Compose(pre_transforms + transforms + post_transforms)
+    return T.Compose(pre_transforms + transforms + post_transforms)
 
 
 class SuiteDataset(Dataset):
@@ -248,7 +250,7 @@ def build_coco_dataset(dataset, num_workers):
     return coco
 
 
-class SuiteCocoDataset(CocoDetection):
+class SuiteCocoDataset(C.CocoDetection):
     def __init__(
         self,
         team_name: str,

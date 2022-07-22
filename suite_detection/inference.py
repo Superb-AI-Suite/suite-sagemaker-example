@@ -8,8 +8,8 @@ from torchvision.transforms import functional as F
 import cv2
 
 import spb.sdk
-from models import build_object_detector
-from suite_utils import call_with_retry, open_image
+from suite_detection.models import build_object_detector
+from suite_detection.utils import call_with_retry, open_image
 
 
 def build_model(model_dir):

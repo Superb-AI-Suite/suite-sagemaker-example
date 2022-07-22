@@ -2,7 +2,13 @@ import json
 from io import BytesIO
 
 import spb.sdk
-from suite_inference_impl import build_model, load_data, preprocess_datas, inference, postprocess
+from suite_detection.inference import (
+    build_model,
+    load_data,
+    preprocess_datas,
+    inference,
+    postprocess,
+)
 
 
 def model_fn(model_dir):

@@ -4,10 +4,16 @@ from pathlib import Path
 import torch
 from torch.utils.data import RandomSampler, SequentialSampler, DataLoader
 
-from suite_dataset import SuiteDataset, SuiteCocoDataset, collate_fn
-from group_by_aspect_ratio import GroupedBatchSampler, create_aspect_ratio_groups
-from models import build_object_detector
-from engine import train_one_epoch, evaluate
+from suite_detection.models import build_object_detector
+from suite_detection.dataset import (
+    SuiteDataset,
+    SuiteCocoDataset,
+    collate_fn,
+)
+from suite_detection.official import (
+    group_by_aspect_ratio as G,
+    engine as E,
+)
 
 
 def train(args):
@@ -33,9 +39,9 @@ def train(args):
 
     train_loader = DataLoader(
         train_dataset, num_workers=args.workers,
-        batch_sampler=GroupedBatchSampler(
+        batch_sampler=G.GroupedBatchSampler(
             RandomSampler(train_dataset),
-            create_aspect_ratio_groups(train_dataset, k=3),
+            G.create_aspect_ratio_groups(train_dataset, k=3),
             args.batch_size,
         ),
         collate_fn=collate_fn,
@@ -61,9 +67,9 @@ def train(args):
     print_freq = 10
 
     for epoch in range(args.epochs):
-        train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq, scaler)
+        E.train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq, scaler)
         lr_scheduler.step()
-        evaluate(model, test_loader, device)
+        E.evaluate(model, test_loader, device)
 
     if args.model_dir:
         os.makedirs(args.model_dir, exist_ok=True)
@@ -99,12 +105,9 @@ def save_model_info(categories, model_info_path):
 
 def save_inference_code(model_dir):
     inference_srcs = [
-        'suite_inference_single.py',
-        'suite_inference_batch.py',
-        'suite_inference_impl.py',
-        'suite_utils.py',
-        'models.py',
-        ('requirements_inference.txt', 'requirements.txt'),
+        'single_inference.py',
+        'batch_inference.py',
+        'requirements.txt',
     ]
 
     src_dir = Path(__file__).resolve().parent

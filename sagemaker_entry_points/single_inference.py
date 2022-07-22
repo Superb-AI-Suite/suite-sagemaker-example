@@ -1,6 +1,12 @@
 import json
 
-from suite_inference_impl import build_model, preprocess_image_url, preprocess_bin_image, inference, to_suite_objects
+from suite_detection.inference import (
+    build_model,
+    preprocess_image_url,
+    preprocess_bin_image,
+    inference,
+    to_suite_objects,
+)
 
 
 def model_fn(model_dir):
