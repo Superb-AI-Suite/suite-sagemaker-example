@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='suite-detection',
-    version='0.1.0',
+    version='0.2.0',
     author='Kye-Hyeon Kim',
     author_email='khkim@superb-ai.com',
     packages=find_packages(),
