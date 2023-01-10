@@ -15,30 +15,34 @@ def get_spb_data(client, page_size=10):
                 yield data_handler
     return {'iterable': generator(), 'total': num_data}
 
-def upload_label(data_list, start_num, end_num):
+def get_bdd100k_labels(path):
+    labels = None
+    with open(path, 'r') as f:
+        labels = json.load(f)
+    labels_by_image_name = {}
+    for label in labels:
+        labels_by_image_name[label['name']] = label
+    return labels_by_image_name
+
+def upload_label(data_list, train_labels, val_labels, start_num, end_num):
     for data_handler in data_list[start_num:end_num]:
         data_key = data_handler.get_key()
-        bdd_image_id = data_key.split('.')[0]
 
-        BDD100K_TRAIN_LABELS_DIRECTORY = os.environ.get('BDD100K_TRAIN_LABELS_DIRECTORY')
-        BDD100K_VAL_LABELS_DIRECTORY = os.environ.get('BDD100K_VAL_LABELS_DIRECTORY')
+        annotations = None
 
-        train_label_path = os.path.join(BDD100K_TRAIN_LABELS_DIRECTORY, f'{bdd_image_id}.json')
-        val_label_path = os.path.join(BDD100K_VAL_LABELS_DIRECTORY, f'{bdd_image_id}.json')
+        if data_key in train_labels:
+            print("train", data_key)
+            annotations = train_labels[data_key]['labels']
 
-        label = None
+        if data_key in val_labels:
+            print("val", data_key)
+            annotations = train_labels[data_key]['labels']
 
-        if os.path.exists(train_label_path):
-            print("train", bdd_image_id)
-            with open(train_label_path, "r") as label_file:
-                label = json.load(label_file)
+        if annotations is None:
+            print(f"Not Found {data_key}")
+            continue
 
-        if os.path.exists(val_label_path):
-            print("val", bdd_image_id)
-            with open(val_label_path, "r") as label_file:
-                label = json.load(label_file)
-
-        for annotation in label["frames"][0]["objects"]:
+        for annotation in annotations:
             try:
                 if "box2d" in annotation:
                     box2d = annotation["box2d"]
@@ -74,6 +78,9 @@ def main():
     team_name = os.environ.get('TEAM_NAME')
     access_key = os.environ.get('ACCESS_KEY')
 
+    bdd100k_train_labels_path = os.environ.get('BDD100K_TRAIN_LABELS_PATH')
+    bdd100k_val_labels_path = os.environ.get('BDD100K_VAL_LABELS_PATH')
+
     client = spb.sdk.Client(project_name=project_name, team_name=team_name, access_key=access_key)
 
     print('Project Name: {}'.format(client.get_project_name()))
@@ -85,6 +92,9 @@ def main():
         data_key = data_handler.get_key()
         data_list.append(data_handler)
 
+    train_labels = get_bdd100k_labels(bdd100k_train_labels_path)
+    val_labels = get_bdd100k_labels(bdd100k_val_labels_path)
+
     jobs = []
     data_num = len(data_list)
     divide_num = data_num / 5
@@ -94,7 +104,7 @@ def main():
             end_num = int(data_num)
         else:
             end_num = int((i+1) * divide_num)
-        p = multiprocessing.Process(target=upload_label, args=(data_list, start_num, end_num))
+        p = multiprocessing.Process(target=upload_label, args=(data_list, train_labels, val_labels, start_num, end_num))
         jobs.append(p)
         p.start()
     for p in jobs:
